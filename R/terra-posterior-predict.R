@@ -36,6 +36,7 @@
 #' @export
 terra_posterior_predict <- function(object, model, draws = 1, cores = 1) {
   # TODO: add in default arguments for terra::predict
+  # TODO: add in tests from bayesian scripts
   if (cores > 1) {
     cl <- parallel::makeCluster(cores)
     use_cluster <- TRUE
@@ -44,7 +45,7 @@ terra_posterior_predict <- function(object, model, draws = 1, cores = 1) {
   }
 
   if (use_cluster) {
-    # leave for now
+    # TODO: fix parallelization
     ## draws_each <- floor(draws / cores)
     ## parallel::clusterExport(cl, c("object", "model"))
     ## result <- terra::rast(
