@@ -33,6 +33,7 @@
 #'   only `cores = 1` is implemented.
 #'
 #' @return A `SpatRaster` object with posterior predictive values.
+#' @export
 terra_posterior_predict <- function(object, model, draws = 1, cores = 1) {
   # TODO: add in default arguments for terra::predict
   if (cores > 1) {
