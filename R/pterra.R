@@ -22,7 +22,7 @@
 #' Utilizing a SpatRaster to hold the covariates, simulate the posterior
 #' predictive distribution (PPD) of a model and return a SpatRaster whose layers
 #' are draws from the PPD.
-#' 
+#'
 #' @param object A spatial object (e.g., `SpatRaster`) that serves as the
 #'   covariate data for prediction. Passed to [terra::predict()].
 #' @param model A fitted Stan model object, typically returned from a cmdstanr
@@ -71,4 +71,3 @@ terra_posterior_predict <- function(object, model, draws = 1, cores = 1) {
 
   return(result)
 }
-
