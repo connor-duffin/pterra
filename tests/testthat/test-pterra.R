@@ -32,11 +32,26 @@ test_that("terra_posterior_predict returns correct dimensions and type", {
 
   # Run posterior predictive simulation
   draws <- 10
-  s_vals <- terra_posterior_predict(r, stan_fit, draws = draws)
+  preds <- terra_posterior_predict(r, stan_fit, draws = draws)
 
-  expect_s4_class(s_vals, "SpatRaster")
-  expect_equal(terra::nlyr(s_vals), draws)
-  expect_equal(dim(s_vals)[1:2], dim(r)[1:2])
+  # Check against known values
+  expect_s4_class(preds, "SpatRaster")
+  expect_equal(terra::nlyr(preds), draws)
+  expect_equal(dim(preds)[1:2], dim(r)[1:2])
+  expect_equal(names(preds), paste0("sample_", 1:10))
+
+  # Parallel version
+  file_r <- file.path(tempdir(), "covs.tif")
+  file_out <- file.path(tempdir(), "draws.tif")
+  terra::writeRaster(r, file_r, overwrite = TRUE)
+  terra_posterior_predict_par(file_r, file_out, stan_fit, draws = draws, cores = 2)
+
+  # The same checks on the output raster
+  preds_par <- terra::rast(file_out)
+  expect_s4_class(preds_par, "SpatRaster")
+  expect_equal(terra::nlyr(preds_par), draws)
+  expect_equal(dim(preds_par)[1:2], dim(r)[1:2])
+  expect_equal(names(preds_par), paste0("sample_", 1:10))
 })
 
 test_that(".get_draws_each splits draws correctly", {
