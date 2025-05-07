@@ -6,6 +6,15 @@
 \usage{
 .get_draws_each(draws, cores)
 }
+\arguments{
+\item{draws}{The number of samples to take.}
+
+\item{cores}{Integer giving the number of cores to take samples on.}
+}
+\value{
+A numeric vector of length \code{cores} with the number of samples to take
+on each core.
+}
 \description{
 Get draws for each core across the processes
 }

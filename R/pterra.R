@@ -117,6 +117,11 @@ terra_posterior_predict_par <- function(file_raster,
 }
 
 #' Get draws for each core across the processes
+#'
+#' @param draws The number of samples to take.
+#' @param cores Integer giving the number of cores to take samples on.
+#' @return A numeric vector of length `cores` with the number of samples to take
+#'   on each core.
 .get_draws_each <- function(draws, cores) {
   draws_each <- rep(draws %/% cores, cores)
   extra <- draws %% cores
