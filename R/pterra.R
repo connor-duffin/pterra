@@ -1,60 +1,100 @@
 #' Simulate from the posterior predictive distribution with {terra}.
 #'
-#' Utilizing a SpatRaster to hold the covariates, simulate the posterior
-#' predictive distribution (PPD) of a model and return a SpatRaster whose layers
-#' are draws from the PPD.
+#' Utilizing a `SpatRaster` to hold the covariates, simulate the posterior
+#' predictive distribution (PPD) of a model and return a `SpatRaster` whose
+#' layers are draws from the PPD.
 #'
 #' @param raster A `SpatRaster` that serves as the covariate data for
 #'   prediction. Passed to [terra::predict()].
-#' @param model A fitted Stan model object, typically returned from a cmdstanr
+#' @param model A fitted Stan model object, typically returned from a {cmdstanr}
 #'   modeling workflow.
 #' @param draws Integer specifying the number of posterior draws to use in
 #'   prediction. Defaults to 1.
+#' @param ... Additional arguments passed to [terra::predict()].
 #'
-#' @return A `SpatRaster` object with posterior predictive values.
+#' @return A `SpatRaster` object with one layer per posterior predictive draw.
+#'   Layer names are of the form `"sample_1"`, `"sample_2"`, etc.
 #' @export
-terra_posterior_predict <- function(raster, model, draws = 1) {
-  # TODO: add in default arguments for terra::predict
-  # TODO: add in tests from bayesian scripts
+terra_posterior_predict <- function(raster, model, draws = 1, ...) {
   result <- terra::predict(
     raster,
     model,
     fun = .stan_posterior_predict,
     draws = draws,
+    ...
   )
+  names(result) <- paste0("sample_", seq(1, terra::nlyr(result)))
 
   return(result)
 }
 
 #' Parallel simulation from the posterior predictive distribution with {terra}.
 #'
-#' Reads in input raster data and writes to individual output rasters.
+#' Reads in a raster file, performs posterior predictive simulations in
+#' parallel, and writes the resulting combined raster to disk. This function is
+#' useful for large-scale raster predictions where computation can be split
+#' across multiple cores.
+#'
+#' Each core handles a subset of the posterior draws and writes results to a
+#' temporary file, which are then combined and written to the specified output.
+#'
+#' @param file_raster Path to the input raster file (readable by
+#'   [terra::rast()]). This file provides the covariate data for prediction.
+#' @param file_out Path to the output raster file where posterior predictive
+#'   draws will be written.
+#' @param model A fitted Stan model object, typically returned from a {cmdstanr}
+#'   modeling workflow.
+#' @param draws Integer specifying the total number of posterior draws to
+#'   simulate. These are split approximately evenly across cores.
+#' @param cores Integer number of parallel workers to use.
+#' @param ... Additional arguments passed to [terra::predict()] via
+#'   [terra_posterior_predict()].
+#'
+#' @return A string giving the file path to the combined output raster.
+#' @export
 terra_posterior_predict_par <- function(file_raster,
+                                        file_out,
                                         model,
                                         draws = 1,
-                                        cores = 1) {
-  draws_each <- .get_draws_each(draws, cores)
-  stopifnot(length(draws_each), cores)
+                                        cores = 1,
+                                        ...) {
+  # Basic checks in the input data
+  stopifnot(file.exists(file_raster))
+  stopifnot(is.numeric(draws) && draws > 0)
+  stopifnot(is.numeric(cores) && cores > 0)
 
-  # TODO: figure out a way to add default arguments
+  draws_each <- .get_draws_each(draws, cores)
+  stopifnot(length(draws_each) == cores)
+
+  # Write each raster to a tempfile, then stitch back together
+  files_each <- tempfile(pattern = rep("stan-pred", cores), fileext = ".tif")
+
+  # If the function dies then make sure to delete the files
+  on.exit(unlink(files_each), add = TRUE)
+
+  # Run the predictions in parallel - write each to a tempfile then combine
   parallel::mclapply(
     1:cores,
-    function(i) {
+    \(i) {
       raster <- terra::rast(file_raster)
-      file_out <- glue::glue("rast-{i}-prediction.tif")
-      terra::predict(
+      terra_posterior_predict(
         raster,
         model,
-        fun = .stan_posterior_predict,
         draws = draws_each[i],
-        filename = file_out,
-        overwrite = TRUE
+        filename = files_each[i],
+        overwrite = TRUE,
+        ...
       )
-
-      return(file_out)
     },
     mc.cores = cores
   )
+
+  # Write raster out to disk after combining, with the sample counts
+  r_out <- terra::rast(files_each)
+  names(r_out) <- paste0("sample_", seq(1, terra::nlyr(r_out)))
+  terra::writeRaster(r_out, file_out, overwrite = TRUE)
+
+  return(file_out)
 }
 
 #' Underlying function to run posterior predictions with terra.
