@@ -2,19 +2,28 @@
 % Please edit documentation in R/pterra.R
 \name{terra_posterior_predict}
 \alias{terra_posterior_predict}
-\title{Simulate from the posterior predictive distribution with {terra}.}
+\title{Simulate from the posterior predictive distribution with 'terra'.}
 \usage{
-terra_posterior_predict(raster, model, draws = 1, ...)
+terra_posterior_predict(
+  raster,
+  model,
+  draws = 1,
+  posterior_fun = rstanarm::posterior_predict,
+  ...
+)
 }
 \arguments{
 \item{raster}{A \code{SpatRaster} that serves as the covariate data for
 prediction. Passed to \code{\link[terra:predict]{terra::predict()}}.}
 
-\item{model}{A fitted Stan model object, typically returned from a {cmdstanr}
+\item{model}{A fitted Stan model object, typically returned from a 'cmdstanr'
 modeling workflow.}
 
 \item{draws}{Integer specifying the number of posterior draws to use in
 prediction. Defaults to 1.}
+
+\item{posterior_fun}{The posterior prediction function to use, either
+\code{rstanarm::posterior_predict} or \code{rstanarm::posterior_epred}.}
 
 \item{...}{Additional arguments passed to \code{\link[terra:predict]{terra::predict()}}.}
 }

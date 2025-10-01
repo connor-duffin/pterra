@@ -2,12 +2,13 @@
 % Please edit documentation in R/pterra.R
 \name{terra_posterior_predict_par}
 \alias{terra_posterior_predict_par}
-\title{Parallel simulation from the posterior predictive distribution with {terra}.}
+\title{Parallel simulation from the posterior predictive distribution with 'terra'.}
 \usage{
 terra_posterior_predict_par(
   file_raster,
   file_out,
   model,
+  posterior_fun = rstanarm::posterior_predict,
   draws = 1,
   cores = 1,
   ...
@@ -20,8 +21,11 @@ terra_posterior_predict_par(
 \item{file_out}{Path to the output raster file where posterior predictive
 draws will be written.}
 
-\item{model}{A fitted Stan model object, typically returned from a {cmdstanr}
+\item{model}{A fitted Stan model object, typically returned from a 'cmdstanr'
 modeling workflow.}
+
+\item{posterior_fun}{The posterior prediction function to use, either
+\code{rstanarm::posterior_predict} or \code{rstanarm::posterior_epred}.}
 
 \item{draws}{Integer specifying the total number of posterior draws to
 simulate. These are split approximately evenly across cores.}

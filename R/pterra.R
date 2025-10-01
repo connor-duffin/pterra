@@ -1,4 +1,26 @@
-#' Simulate from the posterior predictive distribution with {terra}.
+#' Underlying function to run posterior predictions with terra.
+#'
+#' @param mod An rstanarm fitted model object.
+#' @param dat Input data to fit the model, which then gets passed as 'newdata'
+#'   into `rstanarm::posterior_predict`.
+#' @param posterior_fun The posterior prediction function to use, either
+#'  `rstanarm::posterior_predict` or `rstanarm::posterior_epred`.
+#' @param ... Extra arguments passed into `rstanarm::posterior_predict` (such as
+#'   'draws').
+#'
+#' @return A matrix of replicated values with dimensions `nrow(dat)` by `draws`
+#'   (note this is the transposed output of `rstanarm::posterior_predict`).
+.stan_posterior_predict <- function(mod, dat, posterior_fun, ...) {
+  yrep <- posterior_fun(
+    object = mod,
+    newdata = dat,
+    ...
+  )
+
+  return(t(yrep))
+}
+
+#' Simulate from the posterior predictive distribution with 'terra'.
 #'
 #' Utilizing a `SpatRaster` to hold the covariates, simulate the posterior
 #' predictive distribution (PPD) of a model and return a `SpatRaster` whose
@@ -6,20 +28,29 @@
 #'
 #' @param raster A `SpatRaster` that serves as the covariate data for
 #'   prediction. Passed to [terra::predict()].
-#' @param model A fitted Stan model object, typically returned from a {cmdstanr}
+#' @param model A fitted Stan model object, typically returned from a 'cmdstanr'
 #'   modeling workflow.
 #' @param draws Integer specifying the number of posterior draws to use in
 #'   prediction. Defaults to 1.
+#' @param posterior_fun The posterior prediction function to use, either
+#'   `rstanarm::posterior_predict` or `rstanarm::posterior_epred`.
 #' @param ... Additional arguments passed to [terra::predict()].
 #'
 #' @return A `SpatRaster` object with one layer per posterior predictive draw.
 #'   Layer names are of the form `"sample_1"`, `"sample_2"`, etc.
+#'
 #' @export
-terra_posterior_predict <- function(raster, model, draws = 1, ...) {
+terra_posterior_predict <- function(raster,
+                                    model,
+                                    draws = 1,
+                                    posterior_fun = rstanarm::posterior_predict,
+                                    ...) {
   result <- terra::predict(
     raster,
     model,
-    fun = .stan_posterior_predict,
+    fun = function(mod, dat, ...) {
+      .stan_posterior_predict(mod, dat, posterior_fun, ...)
+    },
     draws = draws,
     ...
   )
@@ -28,7 +59,7 @@ terra_posterior_predict <- function(raster, model, draws = 1, ...) {
   return(result)
 }
 
-#' Parallel simulation from the posterior predictive distribution with {terra}.
+#' Parallel simulation from the posterior predictive distribution with 'terra'.
 #'
 #' Reads in a raster file, performs posterior predictive simulations in
 #' parallel, and writes the resulting combined raster to disk. This function is
@@ -42,8 +73,10 @@ terra_posterior_predict <- function(raster, model, draws = 1, ...) {
 #'   [terra::rast()]). This file provides the covariate data for prediction.
 #' @param file_out Path to the output raster file where posterior predictive
 #'   draws will be written.
-#' @param model A fitted Stan model object, typically returned from a {cmdstanr}
+#' @param model A fitted Stan model object, typically returned from a 'cmdstanr'
 #'   modeling workflow.
+#' @param posterior_fun The posterior prediction function to use, either
+#'   `rstanarm::posterior_predict` or `rstanarm::posterior_epred`.
 #' @param draws Integer specifying the total number of posterior draws to
 #'   simulate. These are split approximately evenly across cores.
 #' @param cores Integer number of parallel workers to use.
@@ -55,6 +88,7 @@ terra_posterior_predict <- function(raster, model, draws = 1, ...) {
 terra_posterior_predict_par <- function(file_raster,
                                         file_out,
                                         model,
+                                        posterior_fun = rstanarm::posterior_predict,
                                         draws = 1,
                                         cores = 1,
                                         ...) {
@@ -80,6 +114,7 @@ terra_posterior_predict_par <- function(file_raster,
       terra_posterior_predict(
         raster,
         model,
+        posterior_fun = posterior_fun,
         draws = draws_each[i],
         filename = files_each[i],
         overwrite = TRUE,
@@ -95,25 +130,6 @@ terra_posterior_predict_par <- function(file_raster,
   terra::writeRaster(r_out, file_out, overwrite = TRUE)
 
   return(file_out)
-}
-
-#' Underlying function to run posterior predictions with terra.
-#'
-#' @param mod An rstanarm fitted model object.
-#' @param dat Input data to fit the model, which then gets passed as 'newdata'
-#'   into `rstanarm::posterior_predict`.
-#' @param ... Extra arguments passed into `rstanarm::posterior_predict` (such as
-#'   'draws').
-#' @return A matrix of replicated values with dimensions `nrow(dat)` by `draws`
-#'   (note this is the transposed output of `rstanarm::posterior_predict`).
-.stan_posterior_predict <- function(mod, dat, ...) {
-  yrep <- rstanarm::posterior_predict(
-    object = mod,
-    newdata = dat,
-    ...
-  )
-
-  return(t(yrep))
 }
 
 #' Get draws for each core across the processes

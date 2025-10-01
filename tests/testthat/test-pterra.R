@@ -14,7 +14,7 @@ test_that("terra_posterior_predict returns correct dimensions and type", {
       data = data,
       prior = rstanarm::R2(0.5),
       chains = 1,
-      iter = 100, # You can reduce this for speed if needed
+      iter = 100,
       seed = 12345,
       refresh = 0
     )
@@ -32,7 +32,10 @@ test_that("terra_posterior_predict returns correct dimensions and type", {
 
   # Run posterior predictive simulation
   draws <- 10
-  preds <- terra_posterior_predict(r, stan_fit, draws = draws)
+  preds <- terra_posterior_predict(
+    r, stan_fit,
+    draws = draws, posterior_fun = rstanarm::posterior_predict
+  )
 
   # Check against known values
   expect_s4_class(preds, "SpatRaster")
@@ -44,7 +47,10 @@ test_that("terra_posterior_predict returns correct dimensions and type", {
   file_r <- file.path(tempdir(), "covs.tif")
   file_out <- file.path(tempdir(), "draws.tif")
   terra::writeRaster(r, file_r, overwrite = TRUE)
-  terra_posterior_predict_par(file_r, file_out, stan_fit, draws = draws, cores = 2)
+  terra_posterior_predict_par(
+    file_r, file_out, stan_fit,
+    draws = draws, cores = 2
+  )
 
   # The same checks on the output raster
   preds_par <- terra::rast(file_out)
@@ -52,6 +58,17 @@ test_that("terra_posterior_predict returns correct dimensions and type", {
   expect_equal(terra::nlyr(preds_par), draws)
   expect_equal(dim(preds_par)[1:2], dim(r)[1:2])
   expect_equal(names(preds_par), paste0("sample_", 1:10))
+
+  # Check posterior predictions work with rstanarm::posterior_epred
+  preds_epred <- terra_posterior_predict(
+    r, stan_fit,
+    draws = draws, posterior_fun = rstanarm::posterior_epred
+  )
+
+  expect_s4_class(preds_epred, "SpatRaster")
+  expect_equal(terra::nlyr(preds_epred), draws)
+  expect_equal(dim(preds_epred)[1:2], dim(r)[1:2])
+  expect_equal(names(preds_epred), paste0("sample_", 1:10))
 })
 
 test_that(".get_draws_each splits draws correctly", {
@@ -81,7 +98,7 @@ test_that(".stan_posterior_predict returns matrix of correct dimensions", {
     )
   )
 
-  pred_matrix <- .stan_posterior_predict(stan_fit, data, draws = 10)
+  pred_matrix <- .stan_posterior_predict(stan_fit, data, draws = 10, posterior_fun = rstanarm::posterior_predict)
 
   expect_true(is.matrix(pred_matrix))
   expect_equal(nrow(pred_matrix), nrow(data))

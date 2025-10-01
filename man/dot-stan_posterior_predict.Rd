@@ -4,13 +4,16 @@
 \alias{.stan_posterior_predict}
 \title{Underlying function to run posterior predictions with terra.}
 \usage{
-.stan_posterior_predict(mod, dat, ...)
+.stan_posterior_predict(mod, dat, posterior_fun, ...)
 }
 \arguments{
 \item{mod}{An rstanarm fitted model object.}
 
 \item{dat}{Input data to fit the model, which then gets passed as 'newdata'
 into \code{rstanarm::posterior_predict}.}
+
+\item{posterior_fun}{The posterior prediction function to use, either
+\code{rstanarm::posterior_predict} or \code{rstanarm::posterior_epred}.}
 
 \item{...}{Extra arguments passed into \code{rstanarm::posterior_predict} (such as
 'draws').}
