@@ -52,6 +52,7 @@ terra_posterior_predict <- function(raster,
       .stan_posterior_predict(mod, dat, posterior_fun, ...)
     },
     draws = draws,
+    na.rm = TRUE,
     ...
   )
   names(result) <- paste0("sample_", seq(1, terra::nlyr(result)))
